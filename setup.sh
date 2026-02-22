@@ -152,11 +152,14 @@ copy_configs() {
         if [ -f "$CONFIG_DIR/$file" ]; then
             # Подстановка значений для hosts.toml и trusttunnel_client.toml
             if [ "$file" = "hosts.toml" ]; then
-                sed -e "s/your-domain.com/$SERVER_DOMAIN/g" "$CONFIG_DIR/$file" > "$file"
+                # Используем | как разделитель вместо / для избежания конфликтов
+                sed -e "s|your-domain.com|$SERVER_DOMAIN|g" "$CONFIG_DIR/$file" > "$file"
                 log_info "Скопирован $file (домен: $SERVER_DOMAIN)"
             elif [ "$file" = "trusttunnel_client.toml" ]; then
-                sed -e "s/your-domain.com/$SERVER_DOMAIN/g" \
-                    -e "s/1\.2\.3\.4/$SERVER_IP/g" "$CONFIG_DIR/$file" > "$file"
+                # Экранируем точки в IP для sed
+                ESCAPED_IP=$(echo "$SERVER_IP" | sed 's/\./\\./g')
+                sed -e "s|your-domain.com|$SERVER_DOMAIN|g" \
+                    -e "s|1\\.2\\.3\\.4|$ESCAPED_IP|g" "$CONFIG_DIR/$file" > "$file"
                 log_info "Скопирован $file (домен: $SERVER_DOMAIN, IP: $SERVER_IP)"
             else
                 cp "$CONFIG_DIR/$file" .
@@ -283,8 +286,10 @@ copy_client_config() {
     cd "$CLIENT_DIR"
     
     # Копирование с подстановкой значений
-    sed -e "s/your-domain.com/$SERVER_DOMAIN/g" \
-        -e "s/1\.2\.3\.4/$SERVER_IP/g" \
+    # Экранируем точки в IP для sed
+    ESCAPED_IP=$(echo "$SERVER_IP" | sed 's/\./\\./g')
+    sed -e "s|your-domain.com|$SERVER_DOMAIN|g" \
+        -e "s|1\\.2\\.3\\.4|$ESCAPED_IP|g" \
         "$CONFIG_DIR/trusttunnel_client.toml" > trusttunnel_client.toml
 
     log_info "Конфиг скопирован в $CLIENT_DIR/trusttunnel_client.toml"
